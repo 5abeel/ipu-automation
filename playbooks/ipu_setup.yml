@@ -1,26 +1,26 @@
 ---
 - name: IPU Setup - Verify Connectivity
-  hosts: ole_p5
+  hosts: all_targets
   gather_facts: yes
   tasks:
     - name: Ping all hosts
       ansible.builtin.ping:
 
 - name: Stop idpf driver on host
-  hosts: p5_host
+  hosts: host
   gather_facts: no
   tasks:
     - name: Remove idpf kernel module if loaded
       shell: if lsmod | grep -qw idpf; then rmmod idpf; fi
       ignore_errors: yes
 
-- name: Download images on LP
-  hosts: p5_lp
+- name: Download images on lp
+  hosts: lp
   vars_files:
     - "../group_vars/vault.yml"
     - "../group_vars/all.yml"
   tasks:
-    - name: Ensure temp folder exists on LP
+    - name: Ensure temp folder exists on lp
       file:
         path: "/tmp"
         state: directory
@@ -33,38 +33,38 @@
         saiserver_lp: "/tmp/saiserver.tgz"
         imc_config_lp: "/tmp/imc-config.tgz"
 
-    - name: Download saiserver image tarball on LP
+    - name: Download saiserver image tarball on lp
       get_url:
         url: "{{ saiserver_url }}"
         dest: "{{ saiserver_lp }}"
         url_username: "{{ ci_user }}"
         url_password: "{{ ci_token }}"
 
-    - name: Download imc-config tarball on LP
+    - name: Download imc-config tarball on lp
       get_url:
         url: "{{ imc_config_url }}"
         dest: "{{ imc_config_lp }}"
         url_username: "{{ ci_user }}"
         url_password: "{{ ci_token }}"
 
-- name: Distribute images to IMC via SCP from LP
-  hosts: p5_imc
+- name: Distribute images to imc via SCP from lp
+  hosts: imc
   tasks:
-    - name: Copy saiserver image from LP to IMC using scp
-      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@100.0.0.100:/tmp/saiserver.tgz
-      delegate_to: p5_lp
+    - name: Copy saiserver image from lp to imc using scp
+      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ inventory_hostname }}:/tmp/saiserver.tgz
+      delegate_to: lp
 
-    - name: Copy imc-config image from LP to IMC using scp
-      shell: scp -o StrictHostKeyChecking=no /tmp/imc-config.tgz root@100.0.0.100:/tmp/imc-config.tgz
-      delegate_to: p5_lp
+    - name: Copy imc-config image from lp to imc using scp
+      shell: scp -o StrictHostKeyChecking=no /tmp/imc-config.tgz root@{{ inventory_hostname }}:/tmp/imc-config.tgz
+      delegate_to: lp
 
-    - name: Extract saiserver.tgz on IMC
+    - name: Extract saiserver.tgz on imc
       unarchive:
         src: "/tmp/saiserver.tgz"
         dest: "{{ ansible_env.HOME }}"
         remote_src: yes
 
-    - name: Extract imc-config tarball on IMC
+    - name: Extract imc-config tarball on imc
       unarchive:
         src: "/tmp/imc-config.tgz"
         dest: "/"
@@ -84,22 +84,22 @@
       debug:
         var: imc_pkg_md5.stdout
 
-    - name: Remove previous pkg directory on ACC (via IMC)
+    - name: Remove previous pkg directory on acc (via imc)
       shell: rm -rf /opt/p4/p4sde/share/dash
-      delegate_to: p5_acc
+      delegate_to: acc
 
-    - name: Copy saiserver image to ACC (via IMC)
-      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@192.168.0.2:/tmp/saiserver.tgz
-      delegate_to: p5_imc
+    - name: Copy saiserver image to acc (via imc)
+      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars['acc']['ansible_host'] }}:/tmp/saiserver.tgz
+      delegate_to: imc
 
-    - name: Extract saiserver image on ACC (via IMC)
+    - name: Extract saiserver image on acc (via imc)
       unarchive:
         src: "/tmp/saiserver.tgz"
         dest: "/opt/p4/p4sde"
         remote_src: yes
-      delegate_to: p5_acc
+      delegate_to: acc
 
-    - name: Pause for manual editing before reboot of IMC
+    - name: Pause for manual editing before reboot of imc
       pause:
         minutes: 5
         prompt: "You may edit files on IMC now. Continue to reboot after editing."

@@ -1,23 +1,23 @@
 all:
   children:
-    ole_p5:
+    all_targets:
       hosts:
         # Host directly accessible from control-node
-        p5_host:
+        host:
           ansible_host: <host_ip_address>
           ansible_user: <host_user> # e.g., root
           ansible_password: <host_password>
           hostname: <hostname>
         
         # LP directly accessible from control-node
-        p5_lp:
+        lp:
           ansible_host: <lp_ip_address>
           ansible_user: <lp_user> # e.g., root
           ansible_password: <lp_password>
           hostname: <lp_hostname>
           
         # IMC accessible via LP
-        p5_imc:
+        imc:
           ansible_host: 100.0.0.100
           ansible_user: root
           ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q root@<lp_ip_address>"'
@@ -25,12 +25,9 @@ all:
           hostname: IMC
           
         # ACC accessible via LP -> IMC (double hop)
-        p5_acc:
+        acc:
           ansible_host: 192.168.0.2
           ansible_user: root
           ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q root@100.0.0.100 -o ProxyCommand=\"ssh -W 100.0.0.100:22 -q root@<lp_ip_address>\""'
           ansible_ssh_pass: ""
           hostname: ACC
-          
-      vars:
-        portmapping: "eth2,eth0"
