@@ -54,7 +54,7 @@ This repository automates the provisioning, deployment, and image management for
 ## Getting Started
 
 1. Clone this repository on your local machine (control node).
-2. Update `inventory` and connection details for your specific topology.
+2. Update `group_vars`, `inventory` and connection details for your specific topology.
 3. Run the provided scripts or Ansible playbooks to push updates as needed.
 ```bash
 ansible-playbook playbooks/ipu_setup.yml
