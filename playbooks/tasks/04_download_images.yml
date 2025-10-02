@@ -1,0 +1,27 @@
+# Tasks: Download images onto lp
+- name: Ensure temp folder exists on lp
+  file:
+    path: "/tmp"
+    state: directory
+    mode: "0777"
+
+- name: Set image URLs and paths dynamically
+  set_fact:
+    saiserver_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ saiserver_image_name }}"
+    imc_config_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ imc_config_image_name }}"
+    saiserver_lp: "/tmp/saiserver.tgz"
+    imc_config_lp: "/tmp/imc-config.tgz"
+
+- name: Download saiserver image tarball on lp
+  get_url:
+    url: "{{ saiserver_url }}"
+    dest: "{{ saiserver_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"
+
+- name: Download imc-config tarball on lp
+  get_url:
+    url: "{{ imc_config_url }}"
+    dest: "{{ imc_config_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"

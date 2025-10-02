@@ -1,0 +1,51 @@
+# Bootstrap SSH trust chain tasks
+- name: Initialize host key trust chain
+  block:
+    - name: Remove stale known_hosts entries (optional)
+      shell: ssh-keygen -R {{ item }} || true
+      loop: ["{{ lp_host }}", "{{ imc_host }}", "{{ acc_host }}"]
+      when: reset_known_hosts | bool
+      changed_when: false
+
+    - name: Wait for LP SSH port
+      wait_for:
+        host: "{{ lp_host }}"
+        port: 22
+        timeout: 120
+        sleep: 5
+      changed_when: false
+
+    - name: Prime LP host key acceptance
+      shell: ssh -o BatchMode=yes -o StrictHostKeyChecking=no {{ lp_user }}@{{ lp_host }} 'true'
+      register: lp_key_accept
+      changed_when: false
+      retries: 5
+      delay: 5
+      until: lp_key_accept.rc == 0
+
+    - name: Prime IMC host key via LP
+      shell: >-
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no
+        -J {{ lp_user }}@{{ lp_host }}
+        {{ imc_user }}@{{ imc_host }} 'true'
+      register: imc_key_accept
+      changed_when: false
+      retries: 12
+      delay: 5
+      until: imc_key_accept.rc == 0
+
+    - name: Attempt initial ACC host key prime (non-fatal)
+      shell: >-
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no
+        -J {{ lp_user }}@{{ lp_host }},{{ imc_user }}@{{ imc_host }}
+        {{ acc_user }}@{{ acc_host }} 'true'
+      register: acc_key_accept
+      changed_when: false
+      failed_when: false
+
+    - name: Host key priming summary
+      debug:
+        msg:
+          - "LP prime rc={{ lp_key_accept.rc }}"
+          - "IMC prime rc={{ imc_key_accept.rc }}"
+          - "ACC initial prime rc={{ acc_key_accept.rc }}"

@@ -1,4 +1,4 @@
-- name: Bootstrap - Dynamically trust SSH host keys for jump chain (no keys stored)
+- name: Bootstrap SSH trust chain
   hosts: localhost
   gather_facts: no
   vars:
@@ -10,71 +10,19 @@
     acc_host: "{{ hostvars['acc']['ansible_host'] }}"
     acc_user: "{{ hostvars['acc']['ansible_user'] | default('root') }}"
   tasks:
-    - name: Host key priming sequence
-      block:
-        - name: Optionally remove stale known_hosts entries
-          shell: ssh-keygen -R {{ item }} || true
-          loop: ["{{ lp_host }}", "{{ imc_host }}", "{{ acc_host }}"]
-          when: reset_known_hosts | bool
-          changed_when: false
+    - import_tasks: tasks/01_bootstrap_ssh.yml
 
-        - name: Wait for LP SSH port
-          wait_for:
-            host: "{{ lp_host }}"
-            port: 22
-            timeout: 120
-            sleep: 5
-          changed_when: false
-
-        - name: Prime LP host key
-          shell: ssh -o BatchMode=yes -o StrictHostKeyChecking=no {{ lp_user }}@{{ lp_host }} 'true'
-          register: lp_key_accept
-          changed_when: false
-          retries: 5
-          delay: 5
-          until: lp_key_accept.rc == 0
-
-        - name: Prime IMC host key via LP
-          shell: >-
-            ssh -o BatchMode=yes -o StrictHostKeyChecking=no
-            -J {{ lp_user }}@{{ lp_host }}
-            {{ imc_user }}@{{ imc_host }} 'true'
-          register: imc_key_accept
-          changed_when: false
-          retries: 12
-          delay: 5
-          until: imc_key_accept.rc == 0
-
-        - name: Attempt initial ACC prime (non-fatal)
-          shell: >-
-            ssh -o BatchMode=yes -o StrictHostKeyChecking=no
-            -J {{ lp_user }}@{{ lp_host }},{{ imc_user }}@{{ imc_host }}
-            {{ acc_user }}@{{ acc_host }} 'true'
-          register: acc_key_accept
-          changed_when: false
-          failed_when: false
-
-        - name: Host key priming summary
-          debug:
-            msg:
-              - "LP prime rc={{ lp_key_accept.rc }}"
-              - "IMC prime rc={{ imc_key_accept.rc }}"
-              - "ACC initial prime rc={{ acc_key_accept.rc }}"
-
-- name: IPU Setup - Verify Connectivity
+- name: Verify connectivity
   hosts: all_targets
   gather_facts: yes
   tasks:
-    - name: Ping all hosts
-      ansible.builtin.ping:
+    - import_tasks: tasks/02_verify_connectivity.yml
 
-- name: Stop idpf driver on host
+- name: Host driver cleanup
   hosts: host
   gather_facts: no
   tasks:
-    - name: Remove idpf kernel module if loaded
-      shell: if lsmod | grep -qw idpf; then rmmod idpf; fi
-      ignore_errors: yes
+    - import_tasks: tasks/03_stop_driver.yml
 
 - name: Download images on lp
   hosts: lp
@@ -82,184 +30,14 @@
     - "../group_vars/vault.yml"
     - "../group_vars/all.yml"
   tasks:
-    - name: Ensure temp folder exists on lp
-      file:
-        path: "/tmp"
-        state: directory
-        mode: "0777"
+    - import_tasks: tasks/04_download_images.yml
 
-    - name: Set image URLs and paths dynamically
-      set_fact:
-        saiserver_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ saiserver_image_name }}"
-        imc_config_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ imc_config_image_name }}"
-        saiserver_lp: "/tmp/saiserver.tgz"
-        imc_config_lp: "/tmp/imc-config.tgz"
-
-    - name: Download saiserver image tarball on lp
-      get_url:
-        url: "{{ saiserver_url }}"
-        dest: "{{ saiserver_lp }}"
-        url_username: "{{ ci_user }}"
-        url_password: "{{ ci_token }}"
-
-    - name: Download imc-config tarball on lp
-      get_url:
-        url: "{{ imc_config_url }}"
-        dest: "{{ imc_config_lp }}"
-        url_username: "{{ ci_user }}"
-        url_password: "{{ ci_token }}"
-
-- name: Distribute images to imc via SCP from lp
+- name: Distribute images and reboot IMC
   hosts: imc
   tasks:
-    - name: Copy saiserver image from lp to imc using scp
-      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/saiserver.tgz
-      delegate_to: lp
+    - import_tasks: tasks/05_distribute_and_reboot.yml
+    - name: ACC availability and key registration & health
+      import_tasks: tasks/06_acc_health.yml
 
-    - name: Copy imc-config image from lp to imc using scp
-      shell: scp -o StrictHostKeyChecking=no /tmp/imc-config.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/imc-config.tgz
-      delegate_to: lp
-
-    - name: Extract saiserver.tgz on imc
-      unarchive:
-        src: "/tmp/saiserver.tgz"
-        dest: "{{ ansible_env.HOME }}"
-        remote_src: yes
-
-    - name: Extract imc-config tarball on imc
-      unarchive:
-        src: "/tmp/imc-config.tgz"
-        dest: "/"
-        remote_src: yes
-
-    - name: Copy dash.pkg to /work/scripts/p4_custom.pkg
-      copy:
-        src: "{{ ansible_env.HOME }}/share/dash/dash.pkg"
-        dest: "/work/scripts/p4_custom.pkg"
-        remote_src: yes
-
-    - name: Calculate md5sum for /work/scripts/p4_custom.pkg
-      command: md5sum /work/scripts/p4_custom.pkg
-      register: imc_pkg_md5
-
-    - name: Show dash.pkg md5sum
-      debug:
-        var: imc_pkg_md5.stdout
-
-    - name: Remove previous pkg directory on acc (via imc)
-      shell: rm -rf /opt/p4/p4sde/share/dash
-      delegate_to: acc
-
-    - name: Copy saiserver image to acc (via imc)
-      shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars['acc']['ansible_host'] }}:/tmp/saiserver.tgz
-      delegate_to: imc
-
-    - name: Extract saiserver image on acc (via imc)
-      unarchive:
-        src: "/tmp/saiserver.tgz"
-        dest: "/opt/p4/p4sde"
-        remote_src: yes
-      delegate_to: acc
-
-    - name: Update acc-config.json NIC name on IMC (Workaround)
-      replace:
-        path: /mnt/imc/acc_variable/acc-config.json
-        regexp: 'enp0s1f0'
-        replace: 'enaintc10c4i0'
-        backup: yes
-
-    - name: Trigger IMC reboot
-      reboot:
-        reboot_timeout: 600
-
-    - name: Wait for IMC to come back up
-      wait_for_connection:
-        timeout: 600
-        delay: 10
-
-    - name: Check IMC healthy state
-      ansible.builtin.ping:
-    - name: IMC key refresh (post-reboot)
-      block:
-        - name: Ensure IMC reachable from LP
-          shell: ssh -o StrictHostKeyChecking=no -o BatchMode=yes root@{{ hostvars['imc']['ansible_host'] }} 'true'
-          delegate_to: lp
-          register: prime_imc_lp
-          changed_when: false
-          retries: 15
-          delay: 10
-          until: prime_imc_lp.rc == 0
-
-        - name: ssh-keyscan IMC ed25519 (retry)
-          command: ssh-keyscan -t ed25519 {{ hostvars['imc']['ansible_host'] }}
-          register: imc_keyscan
-          delegate_to: lp
-          retries: 8
-          delay: 5
-          until: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''
-          changed_when: false
-          failed_when: false
-
-        - name: Update LP known_hosts with IMC key
-          known_hosts:
-            name: "{{ hostvars['imc']['ansible_host'] }}"
-            key: "{{ (imc_keyscan.stdout_lines | select('match','^.*ssh-ed25519.*') | list | first) | default('') }}"
-            state: present
-          delegate_to: lp
-          when: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''
-
-    - name: ACC availability and key registration
-      block:
-        - name: Wait for ACC reachability from IMC (SSH command retry every 10s)
-          shell: >-
-            ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no
-            root@{{ hostvars['acc']['ansible_host'] }} 'echo ACC_UP'
-          register: acc_reach
-          delegate_to: imc
-          retries: 60   # 60 * 10s = 600s max
-          delay: 10
-          until: acc_reach.rc == 0
-          changed_when: false
-          failed_when: false
-
-        - name: ssh-keyscan ACC ed25519 from IMC (retry)
-          command: ssh-keyscan -t ed25519 {{ hostvars['acc']['ansible_host'] }}
-          register: acc_keyscan
-          delegate_to: imc
-          retries: 8
-          delay: 5
-          until: acc_keyscan.rc == 0 and acc_keyscan.stdout != ''
-          changed_when: false
-          failed_when: false
-
-        - name: Update IMC known_hosts with ACC key
-          known_hosts:
-            name: "{{ hostvars['acc']['ansible_host'] }}"
-            key: "{{ (acc_keyscan.stdout_lines | select('match','^.*ssh-ed25519.*') | list | first) | default('') }}"
-            state: present
-          delegate_to: imc
-          when: acc_keyscan.rc == 0 and acc_keyscan.stdout != ''
-        - name: Verify ACC health via IMC SSH (quick command)
-          shell: >-
-            ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no
-            root@{{ hostvars['acc']['ansible_host'] }} 'echo ACC_HEALTH_OK'
-          register: acc_health_imc
-          delegate_to: imc
-          changed_when: false
-          retries: 5
-          delay: 6
-          until: acc_health_imc.rc == 0
-        - name: ACC health summary
-          debug:
-            msg:
-              - "ACC IMC SSH health rc={{ acc_health_imc.rc }}"
-
-    - name: Final connectivity summary
-      debug:
-        msg:
-          - "LP prime rc={{ (lp_key_accept.rc | default('n/a')) }}"
-          - "IMC prime rc={{ (imc_key_accept.rc | default('n/a')) }}"
-          - "IMC keyscan success={{ (imc_keyscan is defined and imc_keyscan.rc == 0) | ternary('yes','no') }}"
-          - "ACC initial prime rc={{ (acc_key_accept.rc | default('n/a')) }}"
-          - "ACC keyscan success={{ (acc_keyscan is defined and acc_keyscan.rc == 0) | ternary('yes','no') }}"
+    - import_tasks: tasks/07_summary.yml
 

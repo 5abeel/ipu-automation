@@ -1,0 +1,9 @@
+# Tasks: Final connectivity summary
+- name: Final connectivity summary
+  debug:
+    msg:
+      - "LP prime rc={{ (lp_key_accept.rc | default('n/a')) }}"
+      - "IMC prime rc={{ (imc_key_accept.rc | default('n/a')) }}"
+      - "IMC keyscan success={{ (imc_keyscan is defined and imc_keyscan.rc == 0) | ternary('yes','no') }}"
+      - "ACC initial prime rc={{ (acc_key_accept.rc | default('n/a')) }}"
+      - "ACC keyscan success={{ (acc_keyscan is defined and acc_keyscan.rc == 0) | ternary('yes','no') }}"

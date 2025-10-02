@@ -1,0 +1,97 @@
+# Distribute images, configure IMC/ACC, reboot IMC, refresh keys
+- name: Transfer saiserver image to IMC (scp via lp)
+  shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/saiserver.tgz
+  delegate_to: lp
+
+- name: Transfer imc-config image to IMC (scp via lp)
+  shell: scp -o StrictHostKeyChecking=no /tmp/imc-config.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/imc-config.tgz
+  delegate_to: lp
+
+- name: Extract saiserver image on IMC
+  unarchive:
+    src: "/tmp/saiserver.tgz"
+    dest: "{{ ansible_env.HOME }}"
+    remote_src: yes
+
+- name: Extract imc-config on IMC
+  unarchive:
+    src: "/tmp/imc-config.tgz"
+    dest: "/"
+    remote_src: yes
+
+- name: Stage dash.pkg as p4_custom.pkg
+  copy:
+    src: "{{ ansible_env.HOME }}/share/dash/dash.pkg"
+    dest: "/work/scripts/p4_custom.pkg"
+    remote_src: yes
+
+- name: Compute p4_custom.pkg checksum
+  command: md5sum /work/scripts/p4_custom.pkg
+  register: imc_pkg_md5
+
+- name: Display p4_custom.pkg checksum
+  debug:
+    var: imc_pkg_md5.stdout
+
+- name: Remove prior ACC dash package directory
+  shell: rm -rf /opt/p4/p4sde/share/dash
+  delegate_to: acc
+
+- name: Transfer saiserver image to ACC (via IMC)
+  shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars['acc']['ansible_host'] }}:/tmp/saiserver.tgz
+  delegate_to: imc
+
+- name: Extract saiserver image on ACC
+  unarchive:
+    src: "/tmp/saiserver.tgz"
+    dest: "/opt/p4/p4sde"
+    remote_src: yes
+  delegate_to: acc
+
+- name: Update acc-config.json NIC name (workaround)
+  replace:
+    path: /mnt/imc/acc_variable/acc-config.json
+    regexp: 'enp0s1f0'
+    replace: 'enaintc10c4i0'
+    backup: yes
+
+- name: Reboot IMC
+  reboot:
+    reboot_timeout: 600
+
+- name: Wait for IMC SSH availability
+  wait_for_connection:
+    timeout: 600
+    delay: 10
+
+- name: Verify IMC basic responsiveness
+  ansible.builtin.ping:
+
+- name: Refresh IMC SSH key (post-reboot)
+  block:
+    - name: Verify IMC reachability from LP
+      shell: ssh -o StrictHostKeyChecking=no -o BatchMode=yes root@{{ hostvars['imc']['ansible_host'] }} 'true'
+      delegate_to: lp
+      register: prime_imc_lp
+      changed_when: false
+      retries: 15
+      delay: 10
+      until: prime_imc_lp.rc == 0
+
+    - name: Capture IMC ed25519 host key (retry)
+      command: ssh-keyscan -t ed25519 {{ hostvars['imc']['ansible_host'] }}
+      register: imc_keyscan
+      delegate_to: lp
+      retries: 8
+      delay: 5
+      until: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''
+      changed_when: false
+      failed_when: false
+
+    - name: Register IMC host key on LP
+      known_hosts:
+        name: "{{ hostvars['imc']['ansible_host'] }}"
+        key: "{{ (imc_keyscan.stdout_lines | select('match','^.*ssh-ed25519.*') | list | first) | default('') }}"
+        state: present
+      delegate_to: lp
+      when: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''
