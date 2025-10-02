@@ -7,8 +7,8 @@
 
 - name: Set image URLs and paths dynamically
   set_fact:
-    saiserver_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ saiserver_image_name }}"
-    imc_config_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ imc_config_image_name }}"
+    saiserver_url: "{{ artifactory_base_url }}/{{ build_release }}/{{ saiserver_image_name }}"
+    imc_config_url: "{{ artifactory_base_url }}/{{ build_release }}/{{ imc_config_image_name }}"
     saiserver_lp: "/tmp/saiserver.tgz"
     imc_config_lp: "/tmp/imc-config.tgz"
 

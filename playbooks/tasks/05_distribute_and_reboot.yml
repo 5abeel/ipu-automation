@@ -48,12 +48,26 @@
     remote_src: yes
   delegate_to: acc
 
+- name: Check for legacy NIC name in acc-config.json
+  command: grep -q 'enp0s1f0' /mnt/imc/acc_variable/acc-config.json
+  register: acc_nic_legacy
+  changed_when: false
+  failed_when: false
+
 - name: Update acc-config.json NIC name (workaround)
   replace:
     path: /mnt/imc/acc_variable/acc-config.json
     regexp: 'enp0s1f0'
     replace: 'enaintc10c4i0'
     backup: yes
+  when: acc_nic_legacy.rc == 0
+
+- name: NIC name replacement status
+  debug:
+    msg: >-
+      {{ acc_nic_legacy.rc == 0
+         | ternary('Legacy NIC name found and replace attempted','No legacy NIC name present; replacement skipped') }}
+  changed_when: false
 
 - name: Reboot IMC
   reboot:
