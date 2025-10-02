@@ -12,7 +12,7 @@ This repository automates the provisioning, deployment, and image management for
 ## Features
 
 - **Automated System Image Management:** Copy, extract, and deploy updates with minimal manual intervention.
-- **Multi-Hop SSH Automation:** Handles chained connections and execution, ensuring updates reach otherwise inaccessible hosts.
+- **Multi-Hop SSH Automation:** Handles chained connections and execution, ensuring updates are seamless.
 - **Consistency and Repeatability:** Ensures reliable updates and reproducible results for lab and production IPU deployments.
 
 

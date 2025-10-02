@@ -28,6 +28,7 @@ all:
         acc:
           ansible_host: 192.168.0.2
           ansible_user: root
-          ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q root@100.0.0.100 -o ProxyCommand=\"ssh -W 100.0.0.100:22 -q root@<lp_ip_address>\""'
+          # If keys are not present, ensure root SSH keys/ passwords are configured along the chain.
+          ansible_ssh_common_args: '-o ProxyJump=root@<lp_ip_address>,root@100.0.0.100 -o ServerAliveInterval=60'
           ansible_ssh_pass: ""
           hostname: ACC

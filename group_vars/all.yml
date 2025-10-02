@@ -1,7 +1,11 @@
 ---
 # Global variables
 ansible_python_interpreter: /usr/bin/python3
-ansible_ssh_extra_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+# NOTE: We intentionally do NOT globally disable StrictHostKeyChecking. Host keys
+# are pinned below and managed via a localhost pre-play.
+
+# SSH host keys are NOT stored in repo. The playbook's bootstrap stage
+# dynamically primes (accepts) host keys for lp -> imc -> acc chain.
 
 # IPU configuration paths (customize as needed)
 ipu_install_dir: /opt/ipu
