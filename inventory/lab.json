@@ -1,0 +1,108 @@
+{
+    "ole": {
+        "p3": {
+            "host": {
+                "name": "Cfg-K.7A19.35061.CoyoteP.P3",
+                "ip": "10.165.33.51",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "lp": {
+                "name": "JF3418-7A19.32286.Wildcat.P8",
+                "ip": "10.165.33.59",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "portmapping": ""
+        },
+        "p4": {
+            "host": {
+                "name": "Cfg-K.7A19.34594.CoyoteP.P4",
+                "ip": "10.165.33.152",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "lp": {
+                "name": "JF3418-7A19.32564.Wildcat.P9",
+                "ip": "10.165.33.56",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "portmapping": ""
+        },
+        "p5": {
+            "host": {
+                "name": "JF3418-7A19-35071-PLVision-P5",
+                "ip": "10.165.33.155",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "lp": {
+                "name": "JF3418-7A19.32576.Wildcat.P10",
+                "ip": "10.165.33.154",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "portmapping": "eth2,eth0"
+        },
+        "p6": {
+            "host": {
+                "name": "JF3418-7A19-35085-PLVision-P6",
+                "ip": "10.165.33.157",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "lp": {
+                "name": "JF3418-7A19.32580.Wildcat.P11",
+                "ip": "10.165.33.57",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "portmapping": "eth2,eth0"
+        },
+        "p2": {
+            "host": {
+                "name": "JF3418-7A19-35081-PLVision-P2",
+                "ip": "10.165.33.159",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "lp": {
+                "name": "JF3418-7A19.32287.Wildcat.P7",
+                "ip": "10.165.33.160",
+                "username": "root",
+                "password": "cloudsw123"
+            },
+            "portmapping": "eth2,eth0"
+        }
+    },
+    "ces": {
+        "p17": {
+            "host": {
+                "name": "L-P00576-B7-P17",
+                "ip": "10.166.87.149",
+                "username": "plvision",
+                "password": "D@shw0rd"
+            },
+            "portmapping": ""
+        },
+        "p31": {
+            "host": {
+                "name": "SM-P00553-B8-P31",
+                "ip": "10.166.87.169",
+                "username": "plvision",
+                "password": "D@shw0rd"
+            },
+            "portmapping": ""
+        },
+        "p3": {
+            "host": {
+                "name": "D-P00583-B6-P3",
+                "ip": "10.166.87.123",
+                "username": "plvision",
+                "password": "D@shw0rd"
+            },
+            "portmapping": ""
+        }
+    }
+}

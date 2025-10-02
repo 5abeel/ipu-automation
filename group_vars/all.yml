@@ -1,0 +1,17 @@
+---
+# Global variables
+ansible_python_interpreter: /usr/bin/python3
+ansible_ssh_extra_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# IPU configuration paths (customize as needed)
+ipu_install_dir: /opt/ipu
+ipu_config_dir: /etc/ipu
+
+# Artifactory details
+artifactory_base_url: "https://ubit-artifactory-or.intel.com/artifactory/mountevans_sw_bsp-or-local/SONiConIPU/build"
+build_release: "487"
+release_type: "sonic-mevsai-build-daily"    # or "sonic-mevsai-pr-verification-basic" etc.
+
+# Image name templates
+saiserver_image_name: "saiserver-{{ build_release }}.tgz"
+imc_config_image_name: "imc-config.tgz"
