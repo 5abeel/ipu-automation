@@ -57,7 +57,7 @@ This repository automates the provisioning, deployment, and image management for
 2. Update `group_vars`, `inventory` and connection details for your specific topology.
 
     - `cp group_vars/vault.yml.example group_vars/vault.yml` -> add your CI credentials to the vault.yml file.
-    - Edit inventory/hosts.yml with Host and LP IP addresses, usernames and passwords.
+    - `cp inventory/hosts.yml.example inventory/hosts.yml` -> add your Host and LP IP addresses, usernames and passwords to the hosts.yml file.
 
 3. Run the provided scripts or Ansible playbooks to push updates as needed.
 ```bash
