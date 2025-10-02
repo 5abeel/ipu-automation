@@ -14,41 +14,11 @@
       shell: if lsmod | grep -qw idpf; then rmmod idpf; fi
       ignore_errors: yes
 
-- name: Download images on localhost
-  hosts: localhost
+- name: Download images on LP
+  hosts: p5_lp
   vars_files:
     - "../group_vars/vault.yml"
     - "../group_vars/all.yml"
-  tasks:
-    - name: Create temp directory for images
-      tempfile:
-        state: directory
-        suffix: imc-config
-      register: tempdir
-
-    - name: Set image URLs and paths dynamically
-      set_fact:
-        saiserver_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ saiserver_image_name }}"
-        imc_config_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ imc_config_image_name }}"
-        saiserver_local: "{{ tempdir.path }}/{{ saiserver_image_name }}"
-        imc_config_local: "{{ tempdir.path }}/{{ imc_config_image_name }}"
-
-    - name: Download saiserver image tarball
-      get_url:
-        url: "{{ saiserver_url }}"
-        dest: "{{ saiserver_local }}"
-        url_username: "{{ ci_user }}"
-        url_password: "{{ ci_token }}"
-
-    - name: Download imc-config tarball
-      get_url:
-        url: "{{ imc_config_url }}"
-        dest: "{{ imc_config_local }}"
-        url_username: "{{ ci_user }}"
-        url_password: "{{ ci_token }}"
-
-- name: Distribute images to LP
-  hosts: p5_lp
   tasks:
     - name: Ensure temp folder exists on LP
       file:
@@ -56,17 +26,26 @@
         state: directory
         mode: "0777"
 
-    - name: Copy saiserver image to LP
-      copy:
-        src: "{{ hostvars['localhost']['saiserver_local'] }}"
-        dest: /tmp/saiserver.tgz
-        mode: "0644"
+    - name: Set image URLs and paths dynamically
+      set_fact:
+        saiserver_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ saiserver_image_name }}"
+        imc_config_url: "{{ artifactory_base_url }}/{{ release_type }}/{{ build_release }}/{{ imc_config_image_name }}"
+        saiserver_lp: "/tmp/saiserver.tgz"
+        imc_config_lp: "/tmp/imc-config.tgz"
 
-    - name: Copy imc-config image to LP
-      copy:
-        src: "{{ hostvars['localhost']['imc_config_local'] }}"
-        dest: /tmp/imc-config.tgz
-        mode: "0644"
+    - name: Download saiserver image tarball on LP
+      get_url:
+        url: "{{ saiserver_url }}"
+        dest: "{{ saiserver_lp }}"
+        url_username: "{{ ci_user }}"
+        url_password: "{{ ci_token }}"
+
+    - name: Download imc-config tarball on LP
+      get_url:
+        url: "{{ imc_config_url }}"
+        dest: "{{ imc_config_lp }}"
+        url_username: "{{ ci_user }}"
+        url_password: "{{ ci_token }}"
 
 - name: Distribute images to IMC via SCP from LP
   hosts: p5_imc

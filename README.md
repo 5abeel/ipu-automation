@@ -25,7 +25,7 @@ This repository automates the provisioning, deployment, and image management for
 ```text
 
                             +----------------------+
-                            |   User @ localhost   |
+                            | User @ control-node  |
                             +----------------------+
                                         |
                                         |
