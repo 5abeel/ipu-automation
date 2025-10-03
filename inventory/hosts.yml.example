@@ -1,34 +1,48 @@
 all:
+  vars: # Centralized per-host IP, username and password definitions (edit here only)
+    host_ip: <host_ip_address>
+    lp_ip: <link_partner_ip_address>
+    imc_ip: 100.0.0.100 # typically does not change
+    acc_ip: 192.168.0.2 # typically does not change
+
+    host_user: <host_user>
+    lp_user: <link_partner_user>
+    imc_user: root # typically does not change
+    acc_user: root # typically does not change
+
+    host_password: <host_password>
+    lp_password: <link_partner_password>
+    imc_password: ""    # set if password auth required (default is passwordless)
+    acc_password: ""    # set if password auth required  (default is passwordless)
+
+    # SSH tuning
+    ssh_server_alive_interval: 60
+
   children:
     all_targets:
       hosts:
-        # Host directly accessible from control-node
+        # Host directly accessible from control node
         host:
-          ansible_host: <host_ip_address>
-          ansible_user: <host_user> # e.g., root
-          ansible_password: <host_password>
-          hostname: <hostname>
-        
-        # LP directly accessible from control-node
+          ansible_host: "{{ host_ip }}"
+          ansible_user: "{{ host_user }}"
+          ansible_password: "{{ host_password }}"
+
+        # LP directly accessible from control node
         lp:
-          ansible_host: <lp_ip_address>
-          ansible_user: <lp_user> # e.g., root
-          ansible_password: <lp_password>
-          hostname: <lp_hostname>
-          
-        # IMC accessible via LP
+          ansible_host: "{{ lp_ip }}"
+          ansible_user: "{{ lp_user }}"
+          ansible_password: "{{ lp_password }}"
+
+        # IMC accessible via LP (single hop)
         imc:
-          ansible_host: 100.0.0.100
-          ansible_user: root
-          ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q root@<lp_ip_address>"'
-          ansible_ssh_pass: ""
-          hostname: IMC
-          
+          ansible_host: "{{ imc_ip }}"
+          ansible_user: "{{ imc_user }}"
+          ansible_password: "{{ imc_password }}"
+          ansible_ssh_common_args: "-o ProxyJump=root@{{ lp_ip }} -o ServerAliveInterval={{ ssh_server_alive_interval }}"
+
         # ACC accessible via LP -> IMC (double hop)
         acc:
-          ansible_host: 192.168.0.2
-          ansible_user: root
-          # If keys are not present, ensure root SSH keys/ passwords are configured along the chain.
-          ansible_ssh_common_args: '-o ProxyJump=root@<lp_ip_address>,root@100.0.0.100 -o ServerAliveInterval=60'
-          ansible_ssh_pass: ""
-          hostname: ACC
+          ansible_host: "{{ acc_ip }}"
+          ansible_user: "{{ acc_user }}"
+          ansible_password: "{{ acc_password }}"
+          ansible_ssh_common_args: "-o ProxyJump={{ lp_user }}@{{ lp_ip }},{{ imc_user }}@{{ imc_ip }} -o ServerAliveInterval={{ ssh_server_alive_interval }}"
