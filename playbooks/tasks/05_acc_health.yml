@@ -1,4 +1,4 @@
-# ACC availability, key registration and health verification
+# ACC availability, key registration and health verification (renumbered from 06)
 - name: Wait for ACC SSH reachability from IMC (retry)
   shell: >-
     ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no

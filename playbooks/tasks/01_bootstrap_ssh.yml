@@ -1,4 +1,41 @@
 # Bootstrap SSH trust chain tasks
+- name: Ensure local controller RSA public key exists
+  stat:
+    path: "{{ lookup('env','HOME') }}/.ssh/id_rsa.pub"
+  register: local_rsa_pub
+  delegate_to: localhost
+
+- name: Generate local RSA key (id_rsa) if missing
+  command: ssh-keygen -t rsa -b 4096 -N '' -f "{{ lookup('env','HOME') }}/.ssh/id_rsa"
+  when: not local_rsa_pub.stat.exists
+  delegate_to: localhost
+  register: gen_local_rsa
+  changed_when: gen_local_rsa.rc == 0
+
+- name: Read local RSA public key content
+  slurp:
+    src: "{{ lookup('env','HOME') }}/.ssh/id_rsa.pub"
+  register: local_rsa_pub_content
+  delegate_to: localhost
+
+- name: Set fact for controller public key
+  set_fact:
+    controller_pubkey: "{{ local_rsa_pub_content.content | b64decode | trim }}"
+
+- name: Install controller public key on host
+  authorized_key:
+    user: "{{ hostvars['host']['ansible_user'] | default('root') }}"
+    key: "{{ controller_pubkey }}"
+    state: present
+  delegate_to: host
+
+- name: Install controller public key on lp
+  authorized_key:
+    user: "{{ hostvars['lp']['ansible_user'] | default('root') }}"
+    key: "{{ controller_pubkey }}"
+    state: present
+  delegate_to: lp
+
 - name: Initialize host key trust chain
   block:
     - name: Remove stale known_hosts entries (optional)

@@ -1,4 +1,4 @@
-# Tasks: Stop idpf driver if loaded
+# Tasks: Stop idpf driver if loaded (renumbered from 03)
 - name: Remove idpf kernel module if loaded
   shell: if lsmod | grep -qw idpf; then rmmod idpf; fi
   ignore_errors: yes

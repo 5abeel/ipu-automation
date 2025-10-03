@@ -1,4 +1,4 @@
-# Distribute images, configure IMC/ACC, reboot IMC, refresh keys
+# Distribute images, configure IMC/ACC, reboot IMC, refresh keys (renumbered from 05)
 - name: Transfer saiserver image to IMC (scp via lp)
   shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/saiserver.tgz
   delegate_to: lp

@@ -12,17 +12,11 @@
   tasks:
     - import_tasks: tasks/01_bootstrap_ssh.yml
 
-- name: Verify connectivity
-  hosts: all_targets
-  gather_facts: yes
-  tasks:
-    - import_tasks: tasks/02_verify_connectivity.yml
-
 - name: Host driver cleanup
   hosts: host
   gather_facts: no
   tasks:
-    - import_tasks: tasks/03_stop_driver.yml
+    - import_tasks: tasks/02_stop_driver.yml
 
 - name: Download images on lp
   hosts: lp
@@ -30,14 +24,13 @@
     - "../group_vars/vault.yml"
     - "../group_vars/all.yml"
   tasks:
-    - import_tasks: tasks/04_download_images.yml
+    - import_tasks: tasks/03_download_images.yml
 
 - name: Distribute images and reboot IMC
   hosts: imc
   tasks:
-    - import_tasks: tasks/05_distribute_and_reboot.yml
+    - import_tasks: tasks/04_distribute_and_reboot.yml
     - name: ACC availability and key registration & health
-      import_tasks: tasks/06_acc_health.yml
-
-    - import_tasks: tasks/07_summary.yml
+      import_tasks: tasks/05_acc_health.yml
+    - import_tasks: tasks/06_summary.yml
 

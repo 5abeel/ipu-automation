@@ -1,3 +1,0 @@
-# Tasks: Basic connectivity check
-- name: Ping all hosts
-  ansible.builtin.ping:

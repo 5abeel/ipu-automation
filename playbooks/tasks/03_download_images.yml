@@ -1,4 +1,4 @@
-# Tasks: Download images onto lp
+# Tasks: Download images onto lp (renumbered from 04)
 - name: Ensure temp folder exists on lp
   file:
     path: "/tmp"
