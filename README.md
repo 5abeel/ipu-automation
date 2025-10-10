@@ -45,6 +45,9 @@ This repository automates the provisioning, deployment, and image management for
 
 ```
 
+- Alternate location: These scripts can also execute directly on the LP. Use `localhost` for the LP config section in the hosts.yml file.
+
+
 ## Requirements
 
 - Bash and SSH access on all target nodes.
