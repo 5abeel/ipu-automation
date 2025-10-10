@@ -20,9 +20,7 @@ This repository automates the provisioning, deployment, and image management for
 
 *Assumption*: The Link Partner is connected directly to IMC via 100.0.0.x network (100.0.0.1 on Link Partner (LP) and 100.0.0.100 on IMC). The automation scripts in this repository use the LP for installation and image management.
 
-Option 1:
-
-- The user runs these scripts on a local control-node with direct access to the Host and Link Partner.
+Option 1: The user runs these scripts on a local control-node with direct access to the Host and Link Partner.
 
 ```text
                             +----------------------+
