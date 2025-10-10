@@ -4,7 +4,7 @@ This repository automates the provisioning, deployment, and image management for
 
 ## What does this do?
 
-- Automatically copies, extracts, and updates system images (such as `saiserver` and `imc-config`) for IPU hosts, Link Partners, Management Consoles, and Compute nodes.
+- Automatically copies, extracts, and updates system images (such as `saiserver`, `imc-config`, and `debug-cli`) for IPU hosts, Link Partners, Management Consoles, and Compute nodes.
 - Enables secure file transfers and remote update tasks, even in networks where each node is only accessible from the previous node in the chain.
 - Facilitates reliable firmware and image deployment matching the required network topology for IPU testbeds and clusters.
 
