@@ -18,19 +18,18 @@ This repository automates the provisioning, deployment, and image management for
 
 ## Topology
 
-- The user is expected to run these scripts on a local machine and direct access to the Host and Link Partner (LP).
-- The automation scripts in this repository use the LP for installation and image management.
-- The Link Partner is connected to IMC via 100.0.0.x network (100.0.0.1 on LP and 100.0.0.100 on IMC).
+*Assumption*: The Link Partner is connected directly to IMC via 100.0.0.x network (100.0.0.1 on Link Partner (LP) and 100.0.0.100 on IMC). The automation scripts in this repository use the LP for installation and image management.
+
+Option 1:
+
+- The user runs these scripts on a local control-node with direct access to the Host and Link Partner.
 
 ```text
-
                             +----------------------+
                             | User @ control-node  |
                             +----------------------+
                                         |
-                                        |
                         --------------------------------------------+
-                        |                                           |
                         |                                           |
                 +---------------------------+                       |
                 |           HOST            |                       |
@@ -42,11 +41,22 @@ This repository automates the provisioning, deployment, and image management for
                 |   +===================+   |               +---------------+
                 |                           |
                 +---------------------------+
-
 ```
 
-- Alternate location: These scripts can also execute directly on the LP. Use `localhost` for the LP config section in the hosts.yml file.
+Option 2: These scripts can also execute directly on the LP. Use `localhost` for the LP node in the hosts.yml file.
 
+```text
+                +---------------------------+                       
+                |           HOST            |                       
+                |                           |                       
+                |   +==IPU==============+   |               +---------------+
+                |   |        |          |   |               |               |
+                |   |  ACC <==ssh= IMC <===========ssh========== User @ LP  |
+                |   |        |          |   |               |               |
+                |   +===================+   |               +---------------+
+                |                           |
+                +---------------------------+
+```
 
 ## Requirements
 
