@@ -1,16 +1,21 @@
-# Tasks: Download images onto lp (renumbered from 04)
-- name: Ensure temp folder exists on lp
+# Tasks: Download images onto LP
+- name: Ensure required directories exist on lp
   file:
-    path: "/tmp"
+    path: "{{ item.path }}"
     state: directory
-    mode: "0777"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "/tmp", mode: "0777" }
+    - { path: "/opt", mode: "0755" }
 
 - name: Set image URLs and paths dynamically
   set_fact:
     saiserver_url: "{{ artifactory_base_url }}/{{ build_release }}/{{ saiserver_image_name }}"
     imc_config_url: "{{ artifactory_base_url }}/{{ build_release }}/{{ imc_config_image_name }}"
+    debug_cli_url: "{{ artifactory_base_url }}/{{ build_release }}/{{ debug_cli_image_name }}"
     saiserver_lp: "/tmp/saiserver.tgz"
     imc_config_lp: "/tmp/imc-config.tgz"
+    debug_cli_lp: "/opt/debug-cli.tgz"
 
 - name: Download saiserver image tarball on lp
   get_url:
@@ -25,3 +30,27 @@
     dest: "{{ imc_config_lp }}"
     url_username: "{{ ci_user }}"
     url_password: "{{ ci_token }}"
+
+- name: Download debug-cli tool tarball on lp (/opt)
+  get_url:
+    url: "{{ debug_cli_url }}"
+    dest: "{{ debug_cli_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"
+    mode: "0644"
+  register: debug_cli_download
+
+- name: Extract debug-cli tarball into /opt
+  unarchive:
+    src: "{{ debug_cli_lp }}"
+    dest: "/opt"
+    remote_src: yes
+    mode: "0755"
+  register: debug_cli_extract
+
+- name: Debug-cli deployment summary
+  debug:
+    msg:
+      - "debug-cli tarball placed at {{ debug_cli_lp }}"
+      - "debug-cli extracted into /opt (changed={{ debug_cli_extract.changed or debug_cli_download.changed }})"
+      - "Final path expectation: /opt/debug-cli"

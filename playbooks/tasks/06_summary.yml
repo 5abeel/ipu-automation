@@ -1,4 +1,4 @@
-# Tasks: Final connectivity summary (renumbered from 07)
+# Tasks: Final connectivity summary
 - name: Final connectivity summary
   debug:
     msg:

@@ -13,3 +13,4 @@ build_release: "487"
 # Image name templates
 saiserver_image_name: "saiserver-{{ build_release }}.tgz"
 imc_config_image_name: "imc-config.tgz"
+debug_cli_image_name: "debug-cli.tgz"  # Debug tool (LP only)
