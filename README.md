@@ -75,6 +75,29 @@ Option 2: These scripts can also execute directly on the LP. Use `localhost` for
 ansible-playbook playbooks/ipu_setup.yml
 ```
 
+## Modes & Local Override
+
+`ipu_mode`:
+- `deploy` – use published artifacts (default).
+- `dev` – for local iteration.
+    ```bash
+    ansible-playbook playbooks/ipu_setup.yml -e ipu_mode=dev
+    ```
+
+Local `saiserver` instead of Artifactory:
+1. Put tarball in `staging/` (repo root) or specify an absolute path.
+2. Set variable:
+     ```bash
+     -e local_saiserver_tarball_path=saiserver-custom.tgz
+     ```
+     (or an absolute path)
+3. Play copies it to LP as `/tmp/saiserver.tgz` and skips download.
+
+Variables:
+- `local_artifact_staging_dir` → resolved as `<repo>/staging`
+- `local_saiserver_tarball_path` → empty = download; basename = look in staging; absolute = use directly.
+
+
 ## License
 
 Proprietary — use restricted to internal IPU lab environments.
