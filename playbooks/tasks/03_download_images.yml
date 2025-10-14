@@ -17,12 +17,46 @@
     imc_config_lp: "/tmp/imc-config.tgz"
     debug_cli_lp: "/opt/debug-cli.tgz"
 
-- name: Download saiserver image tarball on lp
+- name: Resolve local saiserver tarball (if provided)
+  when: local_saiserver_tarball_path | length > 0
+  block:
+    - name: Derive absolute path for local saiserver tarball
+      set_fact:
+        _local_saiserver_abs: >-
+          {{ (local_saiserver_tarball_path if local_saiserver_tarball_path.startswith('/') else local_artifact_staging_dir + '/' + local_saiserver_tarball_path) }}
+
+    - name: Assert local saiserver tarball exists
+      stat:
+        path: "{{ _local_saiserver_abs }}"
+      register: local_saiserver_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Fail if local saiserver tarball missing
+      fail:
+        msg: "Local saiserver tarball specified via local_saiserver_tarball_path='{{ local_saiserver_tarball_path }}' not found at resolved path '{{ _local_saiserver_abs }}'"
+      when: not local_saiserver_stat.stat.exists
+      run_once: true
+
+    - name: Copy local saiserver tarball to lp staging (/tmp)
+      copy:
+        src: "{{ _local_saiserver_abs }}"
+        dest: "{{ saiserver_lp }}"
+        mode: "0644"
+      # copy module runs on target (lp) and pulls src from controller
+
+    - name: Set fact to indicate local saiserver was used
+      set_fact:
+        saiserver_source: "local"
+
+- name: Download saiserver image tarball on lp (remote Artifactory)
+  when: local_saiserver_tarball_path | length == 0
   get_url:
     url: "{{ saiserver_url }}"
     dest: "{{ saiserver_lp }}"
     url_username: "{{ ci_user }}"
     url_password: "{{ ci_token }}"
+  register: saiserver_download
 
 - name: Download imc-config tarball on lp
   get_url:
@@ -48,9 +82,13 @@
     mode: "0755"
   register: debug_cli_extract
 
-- name: Debug-cli deployment summary
+- name: LP deployment summary
   debug:
     msg:
       - "debug-cli tarball placed at {{ debug_cli_lp }}"
       - "debug-cli extracted into /opt (changed={{ debug_cli_extract.changed or debug_cli_download.changed }})"
       - "Final path expectation: /opt/debug-cli"
+      - >-
+        {{ 'saiserver provided locally from ' + _local_saiserver_abs if (local_saiserver_tarball_path | length > 0) else 'saiserver downloaded from ' + saiserver_url }}
+      - >-
+        {{ 'saiserver download changed=' + (saiserver_download.changed | default(false) | string) if (local_saiserver_tarball_path | length == 0) else 'local copy assumed changed=true' }}

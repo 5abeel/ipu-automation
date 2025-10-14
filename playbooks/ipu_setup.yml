@@ -28,6 +28,9 @@
 
 - name: Distribute images and reboot IMC
   hosts: imc
+  vars_files:
+    - "../group_vars/vault.yml"
+    - "../group_vars/all.yml"
   tasks:
     - import_tasks: tasks/04_distribute_and_reboot.yml
     - name: ACC availability and key registration & health

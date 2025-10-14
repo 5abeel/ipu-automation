@@ -14,3 +14,12 @@ build_release: "487"
 saiserver_image_name: "saiserver-{{ build_release }}.tgz"
 imc_config_image_name: "imc-config.tgz"
 debug_cli_image_name: "debug-cli.tgz"  # Debug tool (LP only)
+
+# Operating mode (deploy | dev). Default is deploy; override during development with '-e ipu_mode=dev'
+ipu_mode: "deploy"
+
+# Local development artifact overrides (leave empty for remote Artifactory usage)
+# Drop a locally built saiserver package tarball here (e.g., ./staging/saiserver-custom.tgz) to skip remote download.
+local_artifact_staging_dir: "{{ playbook_dir | dirname }}/staging"  # Project root staging
+local_saiserver_tarball_path: ""  # Local tarball filename (looked up under local_artifact_staging_dir) or absolute path. Leave empty to download from Artifactory.
+
