@@ -1,0 +1,56 @@
+# Artifact: debug-cli tool acquisition
+- name: Use local debug-cli tarball if provided
+  when: local_debug_cli_tarball_path | default('') | length > 0
+  block:
+    - name: Derive absolute path for local debug-cli tarball
+      set_fact:
+        _local_debug_cli_abs: >-
+          {{ (local_debug_cli_tarball_path if local_debug_cli_tarball_path.startswith('/') else local_artifact_staging_dir + '/' + local_debug_cli_tarball_path) }}
+      tags: [artifacts]
+
+    - name: Assert local debug-cli tarball exists
+      stat:
+        path: "{{ _local_debug_cli_abs }}"
+      register: local_debug_cli_stat
+      delegate_to: localhost
+      run_once: true
+      tags: [artifacts]
+
+    - name: Fail if local debug-cli tarball missing
+      fail:
+        msg: "Local debug-cli tarball not found at '{{ _local_debug_cli_abs }}' (from local_debug_cli_tarball_path='{{ local_debug_cli_tarball_path }}')"
+      when: not local_debug_cli_stat.stat.exists
+      run_once: true
+      tags: [artifacts]
+
+    - name: Copy local debug-cli tarball to lp (/opt)
+      copy:
+        src: "{{ _local_debug_cli_abs }}"
+        dest: "{{ debug_cli_lp }}"
+        mode: "0644"
+      tags: [artifacts]
+
+    - name: Set fact to indicate local debug-cli was used
+      set_fact:
+        debug_cli_source: "local"
+      tags: [artifacts]
+
+- name: Download debug-cli tool tarball on lp (/opt)
+  when: (local_debug_cli_tarball_path | default('') | length) == 0
+  get_url:
+    url: "{{ debug_cli_url }}"
+    dest: "{{ debug_cli_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"
+    mode: "0644"
+  register: debug_cli_download
+  tags: [artifacts]
+
+- name: Extract debug-cli tarball into /opt
+  unarchive:
+    src: "{{ debug_cli_lp }}"
+    dest: "/opt"
+    remote_src: yes
+    mode: "0755"
+  register: debug_cli_extract
+  tags: [artifacts]

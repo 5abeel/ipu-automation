@@ -1,0 +1,16 @@
+---
+# Final summary (renamed from 06_summary)
+- name: Final summary
+  tags: [summary]
+  vars:
+    _lp: "{{ hostvars['lp'] }}"
+  debug:
+    msg:
+      - "Final playbook summary:"
+      - "IPU_Mode={{ ipu_mode | default('undefined') }}"
+      - "saiserver artifact source={{ (_lp.saiserver_use_local | default(false) | bool) | ternary('local:'+ (_lp.saiserver_local_candidate | default('unset')), 'remote:'+ (_lp.saiserver_url | default('n/a'))) }}"
+      - "imc-config artifact source={{ (((_lp.imc_config_source | default('remote')) == 'local')) | ternary('local:'+ (_lp._local_imc_config_abs | default('unset')), 'remote:'+ (_lp.imc_config_url | default('n/a'))) }}"
+      - "debug-cli artifact source={{ (((_lp.debug_cli_source | default('remote')) == 'local')) | ternary('local:'+ (_lp._local_debug_cli_abs | default('unset')), 'remote:'+ (_lp.debug_cli_url | default('n/a'))) }}"
+      - "reserved-memory previous={{ imc_reserved_memory_previous_hash | default('n/a') }}"
+      - "reserved-memory new={{ imc_reserved_memory_new_hash | default('n/a') }}"
+      - "imc_reboot_required={{ imc_reboot_required | default(false) }} reason={{ imc_reboot_reason | default('n/a') }}"

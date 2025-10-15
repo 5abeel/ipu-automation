@@ -1,0 +1,60 @@
+# Artifact: imc-config acquisition
+- name: Use local imc-config tarball if provided
+  when: local_imc_config_tarball_path | default('') | length > 0
+  block:
+    - name: Derive absolute path for local imc-config tarball
+      set_fact:
+        _local_imc_config_abs: >-
+          {{ (local_imc_config_tarball_path if local_imc_config_tarball_path.startswith('/') else local_artifact_staging_dir + '/' + local_imc_config_tarball_path) }}
+      tags: [artifacts]
+
+    - name: Assert local imc-config tarball exists
+      stat:
+        path: "{{ _local_imc_config_abs }}"
+      register: local_imc_config_stat
+      delegate_to: localhost
+      run_once: true
+      tags: [artifacts]
+
+    - name: Fail if local imc-config tarball missing
+      fail:
+        msg: "Local imc-config tarball not found at '{{ _local_imc_config_abs }}' (from local_imc_config_tarball_path='{{ local_imc_config_tarball_path }}')"
+      when: not local_imc_config_stat.stat.exists
+      run_once: true
+      tags: [artifacts]
+
+    - name: Copy local imc-config tarball to lp staging (/tmp)
+      copy:
+        src: "{{ _local_imc_config_abs }}"
+        dest: "{{ imc_config_lp }}"
+        mode: "0644"
+      tags: [artifacts]
+
+    - name: Set fact to indicate local imc-config was used
+      set_fact:
+        imc_config_source: "local"
+      tags: [artifacts]
+
+- name: Download imc-config tarball on lp (remote Artifactory)
+  when: (local_imc_config_tarball_path | default('') | length) == 0
+  get_url:
+    url: "{{ imc_config_url }}"
+    dest: "{{ imc_config_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"
+  register: imc_config_download
+  tags: [artifacts]
+
+- name: Compute candidate reserved-memory config hash (inside imc-config tarball)
+  shell: >-
+    tar -xOf {{ imc_config_lp }} {{ reserved_memory_config_relative_path }} 2>/dev/null | sha256sum | awk '{print $1}'
+  register: reserved_memory_candidate_hash_cmd
+  changed_when: false
+  failed_when: false
+  tags: [artifacts]
+
+- name: Set fact for candidate reserved-memory hash
+  set_fact:
+    imc_reserved_memory_candidate_hash: >-
+      {{ (reserved_memory_candidate_hash_cmd.stdout | trim) if (reserved_memory_candidate_hash_cmd.stdout | trim) != '' else 'missing' }}
+  tags: [artifacts]

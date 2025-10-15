@@ -1,0 +1,75 @@
+---
+# ACC distribution and configuration tasks (split from 04_distribute_and_reboot)
+
+- name: Check if base P4 SDE directory exists on ACC
+  tags: [acc]
+  stat:
+    path: /opt/p4/p4sde
+  register: acc_p4sde_dir
+  delegate_to: acc
+
+- name: Check if base P4 tarball exists on ACC
+  tags: [acc]
+  stat:
+    path: /opt/p4.tar.gz
+  register: acc_p4_tar
+  delegate_to: acc
+  when: not acc_p4sde_dir.stat.exists | default(false)
+
+- name: Extract base P4 tarball to create /opt/p4/p4sde (first install)
+  tags: [acc]
+  unarchive:
+    src: /opt/p4.tar.gz
+    dest: /opt
+    remote_src: yes
+  delegate_to: acc
+  when: not acc_p4sde_dir.stat.exists | default(false) and acc_p4_tar.stat.exists | default(false)
+
+- name: Fail if /opt/p4/p4sde missing and no /opt/p4.tar.gz present
+  tags: [acc]
+  fail:
+    msg: "/opt/p4/p4sde directory absent and /opt/p4.tar.gz not found on ACC; cannot proceed with ACC distribution"
+  when: not acc_p4sde_dir.stat.exists | default(false) and (acc_p4_tar is defined and (acc_p4_tar.stat.exists | default(false)) == false)
+  delegate_to: acc
+
+- name: Remove prior ACC dash package directory
+  tags: [acc]
+  shell: rm -rf /opt/p4/p4sde/share/dash
+  delegate_to: acc
+
+- name: Transfer saiserver image to ACC (via IMC)
+  tags: [acc]
+  shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars['acc']['ansible_host'] }}:/tmp/saiserver.tgz
+  delegate_to: imc
+
+- name: Extract saiserver image on ACC
+  tags: [acc]
+  unarchive:
+    src: "/tmp/saiserver.tgz"
+    dest: "/opt/p4/p4sde"
+    remote_src: yes
+  delegate_to: acc
+
+- name: Check for legacy NIC name in acc-config.json
+  tags: [acc]
+  command: grep -q 'enp0s1f0' /mnt/imc/acc_variable/acc-config.json
+  register: acc_nic_legacy
+  changed_when: false
+  failed_when: false
+
+- name: Update acc-config.json NIC name (workaround)
+  tags: [acc]
+  replace:
+    path: /mnt/imc/acc_variable/acc-config.json
+    regexp: 'enp0s1f0'
+    replace: 'enaintc10c4i0'
+    backup: yes
+  when: acc_nic_legacy.rc == 0
+
+- name: NIC name replacement status
+  tags: [acc]
+  debug:
+    msg: >-
+      {{ acc_nic_legacy.rc == 0
+         | ternary('Legacy NIC name found and replace attempted','No legacy NIC name present; replacement skipped') }}
+  changed_when: false

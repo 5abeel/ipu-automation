@@ -1,0 +1,83 @@
+---
+# IMC distribution and configuration tasks (previously part of 04_distribute_and_reboot)
+- name: Compute existing reserved-memory file hash on IMC (pre-extraction)
+  tags: [imc_dist]
+  shell: >-
+    if [ -f "/{{ reserved_memory_config_relative_path }}" ]; then sha256sum "/{{ reserved_memory_config_relative_path }}" | awk '{print $1}'; else echo absent; fi
+  register: imc_reserved_memory_prev_hash_cmd
+  changed_when: false
+  failed_when: false
+
+- name: Set fact for previous reserved-memory hash
+  tags: [imc_dist]
+  set_fact:
+    imc_reserved_memory_previous_hash: "{{ imc_reserved_memory_prev_hash_cmd.stdout | trim }}"
+
+- name: Transfer saiserver image to IMC (scp via lp)
+  tags: [imc_dist]
+  shell: scp -o StrictHostKeyChecking=no /tmp/saiserver.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/saiserver.tgz
+  delegate_to: lp
+
+- name: Transfer imc-config image to IMC (scp via lp)
+  tags: [imc_dist]
+  shell: scp -o StrictHostKeyChecking=no /tmp/imc-config.tgz root@{{ hostvars[inventory_hostname]['ansible_host'] }}:/tmp/imc-config.tgz
+  delegate_to: lp
+
+- name: Extract saiserver image on IMC
+  tags: [imc_dist]
+  unarchive:
+    src: "/tmp/saiserver.tgz"
+    dest: "{{ ansible_env.HOME }}"
+    remote_src: yes
+
+- name: Extract imc-config on IMC
+  tags: [imc_dist]
+  unarchive:
+    src: "/tmp/imc-config.tgz"
+    dest: "/"
+    remote_src: yes
+
+- name: Compute new reserved-memory file hash after extraction
+  tags: [imc_dist]
+  shell: >-
+    if [ -f "/{{ reserved_memory_config_relative_path }}" ]; then sha256sum "/{{ reserved_memory_config_relative_path }}" | awk '{print $1}'; else echo missing; fi
+  register: imc_reserved_memory_new_hash_cmd
+  changed_when: false
+
+- name: Set fact for new reserved-memory hash
+  tags: [imc_dist]
+  set_fact:
+    imc_reserved_memory_new_hash: "{{ imc_reserved_memory_new_hash_cmd.stdout | trim }}"
+
+- name: Decide if IMC reboot required based on reserved-memory change
+  tags: [imc_dist]
+  set_fact:
+    imc_reboot_required: >-
+      {{ (imc_reserved_memory_previous_hash in ['absent','missing']) or (imc_reserved_memory_new_hash != imc_reserved_memory_previous_hash) }}
+    imc_reboot_reason: >-
+      {{ (imc_reserved_memory_previous_hash in ['absent','missing']) | ternary('new-file', (imc_reserved_memory_new_hash != imc_reserved_memory_previous_hash) | ternary('hash-changed','no-change')) }}
+
+- name: Debug IMC reserved-memory hash decision
+  tags: [imc_dist]
+  debug:
+    msg:
+      - "reserved-memory previous={{ imc_reserved_memory_previous_hash }}"
+      - "reserved-memory new (extracted)={{ imc_reserved_memory_new_hash }}"
+      - "imc_reboot_required={{ imc_reboot_required | default(false) }} reason={{ imc_reboot_reason | default('n/a') }}"
+
+- name: Stage dash.pkg as p4_custom.pkg
+  tags: [imc_dist, p4]
+  copy:
+    src: "{{ ansible_env.HOME }}/share/dash/dash.pkg"
+    dest: "/work/scripts/p4_custom.pkg"
+    remote_src: yes
+
+- name: Compute p4_custom.pkg checksum
+  tags: [imc_dist, p4]
+  command: md5sum /work/scripts/p4_custom.pkg
+  register: imc_pkg_md5
+
+- name: Display p4_custom.pkg checksum
+  tags: [imc_dist, p4]
+  debug:
+    var: imc_pkg_md5.stdout

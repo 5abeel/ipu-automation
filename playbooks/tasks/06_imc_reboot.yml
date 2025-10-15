@@ -1,0 +1,49 @@
+---
+# IMC reboot & post-reboot key refresh (split from 04_distribute_and_reboot)
+- name: Reboot IMC
+  tags: [imc_reboot]
+  when: imc_reboot_required | default(true) | bool
+  reboot:
+    reboot_timeout: 600
+
+- name: Wait for IMC SSH availability
+  tags: [imc_reboot]
+  wait_for_connection:
+    timeout: 600
+    delay: 10
+
+- name: Verify IMC basic responsiveness
+  tags: [imc_reboot]
+  when: imc_reboot_required | default(true) | bool
+  ansible.builtin.ping:
+
+- name: Refresh IMC SSH key (post-reboot)
+  tags: [imc_reboot]
+  when: imc_reboot_required | default(true) | bool
+  block:
+    - name: Verify IMC reachability from LP
+      shell: ssh -o StrictHostKeyChecking=no -o BatchMode=yes root@{{ hostvars['imc']['ansible_host'] }} 'true'
+      delegate_to: lp
+      register: prime_imc_lp
+      changed_when: false
+      retries: 15
+      delay: 10
+      until: prime_imc_lp.rc == 0
+
+    - name: Capture IMC ed25519 host key (retry)
+      command: ssh-keyscan -t ed25519 {{ hostvars['imc']['ansible_host'] }}
+      register: imc_keyscan
+      delegate_to: lp
+      retries: 8
+      delay: 5
+      until: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''
+      changed_when: false
+      failed_when: false
+
+    - name: Register IMC host key on LP
+      known_hosts:
+        name: "{{ hostvars['imc']['ansible_host'] }}"
+        key: "{{ (imc_keyscan.stdout_lines | select('match','^.*ssh-ed25519.*') | list | first) | default('') }}"
+        state: present
+      delegate_to: lp
+      when: imc_keyscan.rc == 0 and imc_keyscan.stdout != ''

@@ -1,4 +1,4 @@
-# Tasks: Download images onto LP
+## Artifact orchestration wrapper (directories + shared facts + includes + summary)
 - name: Ensure required directories exist on lp
   file:
     path: "{{ item.path }}"
@@ -7,6 +7,7 @@
   loop:
     - { path: "/tmp", mode: "0777" }
     - { path: "/opt", mode: "0755" }
+  tags: [artifacts]
 
 - name: Set image URLs and paths dynamically
   set_fact:
@@ -16,71 +17,19 @@
     saiserver_lp: "/tmp/saiserver.tgz"
     imc_config_lp: "/tmp/imc-config.tgz"
     debug_cli_lp: "/opt/debug-cli.tgz"
+  tags: [artifacts]
 
-- name: Resolve local saiserver tarball (if provided)
-  when: local_saiserver_tarball_path | length > 0
-  block:
-    - name: Derive absolute path for local saiserver tarball
-      set_fact:
-        _local_saiserver_abs: >-
-          {{ (local_saiserver_tarball_path if local_saiserver_tarball_path.startswith('/') else local_artifact_staging_dir + '/' + local_saiserver_tarball_path) }}
+- name: Acquire saiserver artifact
+  import_tasks: artifacts/saiserver.yml
+  tags: [artifacts]
 
-    - name: Assert local saiserver tarball exists
-      stat:
-        path: "{{ _local_saiserver_abs }}"
-      register: local_saiserver_stat
-      delegate_to: localhost
-      run_once: true
+- name: Acquire imc-config artifact
+  import_tasks: artifacts/imc_config.yml
+  tags: [artifacts]
 
-    - name: Fail if local saiserver tarball missing
-      fail:
-        msg: "Local saiserver tarball specified via local_saiserver_tarball_path='{{ local_saiserver_tarball_path }}' not found at resolved path '{{ _local_saiserver_abs }}'"
-      when: not local_saiserver_stat.stat.exists
-      run_once: true
-
-    - name: Copy local saiserver tarball to lp staging (/tmp)
-      copy:
-        src: "{{ _local_saiserver_abs }}"
-        dest: "{{ saiserver_lp }}"
-        mode: "0644"
-      # copy module runs on target (lp) and pulls src from controller
-
-    - name: Set fact to indicate local saiserver was used
-      set_fact:
-        saiserver_source: "local"
-
-- name: Download saiserver image tarball on lp (remote Artifactory)
-  when: local_saiserver_tarball_path | length == 0
-  get_url:
-    url: "{{ saiserver_url }}"
-    dest: "{{ saiserver_lp }}"
-    url_username: "{{ ci_user }}"
-    url_password: "{{ ci_token }}"
-  register: saiserver_download
-
-- name: Download imc-config tarball on lp
-  get_url:
-    url: "{{ imc_config_url }}"
-    dest: "{{ imc_config_lp }}"
-    url_username: "{{ ci_user }}"
-    url_password: "{{ ci_token }}"
-
-- name: Download debug-cli tool tarball on lp (/opt)
-  get_url:
-    url: "{{ debug_cli_url }}"
-    dest: "{{ debug_cli_lp }}"
-    url_username: "{{ ci_user }}"
-    url_password: "{{ ci_token }}"
-    mode: "0644"
-  register: debug_cli_download
-
-- name: Extract debug-cli tarball into /opt
-  unarchive:
-    src: "{{ debug_cli_lp }}"
-    dest: "/opt"
-    remote_src: yes
-    mode: "0755"
-  register: debug_cli_extract
+- name: Acquire debug-cli artifact
+  import_tasks: artifacts/debug_cli.yml
+  tags: [artifacts]
 
 - name: LP deployment summary
   debug:
@@ -92,3 +41,8 @@
         {{ 'saiserver provided locally from ' + _local_saiserver_abs if (local_saiserver_tarball_path | length > 0) else 'saiserver downloaded from ' + saiserver_url }}
       - >-
         {{ 'saiserver download changed=' + (saiserver_download.changed | default(false) | string) if (local_saiserver_tarball_path | length == 0) else 'local copy assumed changed=true' }}
+      - >-
+        {{ 'imc-config provided locally from ' + _local_imc_config_abs if (local_imc_config_tarball_path | default('') | length > 0) else 'imc-config downloaded from ' + imc_config_url }}
+      - >-
+        {{ 'debug-cli provided locally from ' + _local_debug_cli_abs if (local_debug_cli_tarball_path | default('') | length > 0) else 'debug-cli downloaded from ' + debug_cli_url }}
+  tags: [artifacts]

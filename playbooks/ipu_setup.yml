@@ -26,14 +26,29 @@
   tasks:
     - import_tasks: tasks/03_download_images.yml
 
-- name: Distribute images and reboot IMC
+- name: IMC distribute
   hosts: imc
   vars_files:
     - "../group_vars/vault.yml"
     - "../group_vars/all.yml"
   tasks:
-    - import_tasks: tasks/04_distribute_and_reboot.yml
-    - name: ACC availability and key registration & health
-      import_tasks: tasks/05_acc_health.yml
-    - import_tasks: tasks/06_summary.yml
+    - import_tasks: tasks/04_imc_distribute.yml
+
+- name: ACC distribute
+  hosts: imc
+  vars_files:
+    - "../group_vars/vault.yml"
+    - "../group_vars/all.yml"
+  tasks:
+    - import_tasks: tasks/05_acc_distribute.yml
+
+- name: IMC reboot sequence
+  hosts: imc
+  vars_files:
+    - "../group_vars/vault.yml"
+    - "../group_vars/all.yml"
+  tasks:
+    - import_tasks: tasks/06_imc_reboot.yml
+    - import_tasks: tasks/07_acc_health.yml
+    - import_tasks: tasks/08_summary.yml
 

@@ -1,6 +1,6 @@
-# IPU Automation Suite
+# Ansible IPU Automation Suite
 
-This repository automates the provisioning, deployment, and image management for Intel IPU-based lab infrastructures across multiple nodes. It offers scripted and Ansible-based workflows for multi-hop, chained SSH environments often found in labs.
+This automates the provisioning, deployment, and image management for Intel IPU-based lab infrastructures across multiple nodes. It offers scripted and Ansible-based workflows for multi-hop, chained SSH environments often found in labs.
 
 ## What does this do?
 
@@ -56,19 +56,28 @@ Option 2: These scripts can also execute directly on the LP. Use `localhost` for
                 +---------------------------+
 ```
 
+
 ## Requirements
 
 - Bash and SSH access on all target nodes.
-- Ansible (for playbooks) with passwordless SSH setup where needed.
 - Availability of all required system images.
+- Ansible (for playbooks) with passwordless SSH setup where needed.
+
+```bash
+# For Debian/Ubuntu distribution
+apt install ansible
+
+# For Fedora/CentOS/RHEL distribution
+dnf install ansible ansible-core
+```
 
 ## Getting Started
 
 1. Clone this repository on your local machine (control node).
 2. Update `group_vars`, `inventory` and connection details for your specific topology.
 
-    - `cp group_vars/vault.yml.example group_vars/vault.yml` -> add your CI credentials to the vault.yml file.
-    - `cp inventory/hosts.yml.example inventory/hosts.yml` -> add your Host and LP IP addresses, usernames and passwords to the hosts.yml file.
+    - `cp ./group_vars/vault.yml.example ./group_vars/vault.yml` -> add your CI credentials to the vault.yml file.
+    - `cp ./inventory/hosts.yml.example ./inventory/hosts.yml` -> add your Host and LP IP addresses, usernames and passwords to the hosts.yml file.
 
 3. Run the provided scripts or Ansible playbooks to push updates as needed.
 ```bash
@@ -96,8 +105,3 @@ Local `saiserver` instead of Artifactory:
 Variables:
 - `local_artifact_staging_dir` → resolved as `<repo>/staging`
 - `local_saiserver_tarball_path` → empty = download; basename = look in staging; absolute = use directly.
-
-
-## License
-
-Proprietary — use restricted to internal IPU lab environments.

@@ -2,3 +2,4 @@
 - name: Remove idpf kernel module if loaded
   shell: if lsmod | grep -qw idpf; then rmmod idpf; fi
   ignore_errors: yes
+  tags: [host_cleanup]

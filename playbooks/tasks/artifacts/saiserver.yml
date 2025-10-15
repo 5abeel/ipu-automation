@@ -1,0 +1,46 @@
+# Artifact: saiserver acquisition
+- name: Resolve local saiserver tarball (if provided)
+  when: local_saiserver_tarball_path | length > 0
+  block:
+    - name: Derive absolute path for local saiserver tarball
+      set_fact:
+        _local_saiserver_abs: >-
+          {{ (local_saiserver_tarball_path if local_saiserver_tarball_path.startswith('/') else local_artifact_staging_dir + '/' + local_saiserver_tarball_path) }}
+      tags: [artifacts]
+
+    - name: Assert local saiserver tarball exists
+      stat:
+        path: "{{ _local_saiserver_abs }}"
+      register: local_saiserver_stat
+      delegate_to: localhost
+      run_once: true
+      tags: [artifacts]
+
+    - name: Fail if local saiserver tarball missing
+      fail:
+        msg: "Local saiserver tarball specified via local_saiserver_tarball_path='{{ local_saiserver_tarball_path }}' not found at resolved path '{{ _local_saiserver_abs }}'"
+      when: not local_saiserver_stat.stat.exists
+      run_once: true
+      tags: [artifacts]
+
+    - name: Copy local saiserver tarball to lp staging (/tmp)
+      copy:
+        src: "{{ _local_saiserver_abs }}"
+        dest: "{{ saiserver_lp }}"
+        mode: "0644"
+      tags: [artifacts]
+
+    - name: Set fact to indicate local saiserver was used
+      set_fact:
+        saiserver_source: "local"
+      tags: [artifacts]
+
+- name: Download saiserver image tarball on lp (remote Artifactory)
+  when: local_saiserver_tarball_path | length == 0
+  get_url:
+    url: "{{ saiserver_url }}"
+    dest: "{{ saiserver_lp }}"
+    url_username: "{{ ci_user }}"
+    url_password: "{{ ci_token }}"
+  register: saiserver_download
+  tags: [artifacts]

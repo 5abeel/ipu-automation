@@ -22,4 +22,10 @@ ipu_mode: "deploy"
 # Drop a locally built saiserver package tarball here (e.g., ./staging/saiserver-custom.tgz) to skip remote download.
 local_artifact_staging_dir: "{{ playbook_dir | dirname }}/staging"  # Project root staging
 local_saiserver_tarball_path: ""  # Local tarball filename (looked up under local_artifact_staging_dir) or absolute path. Leave empty to download from Artifactory.
+local_imc_config_tarball_path: ""  # Optional local imc-config .tgz (basename or absolute). Empty -> download.
+local_debug_cli_tarball_path: ""   # Optional local debug-cli .tgz (basename or absolute). Empty -> download.
+
+# IMC config change detection
+# Relative path (inside imc-config extraction root '/') to the file whose content change triggers IMC reboot.
+reserved_memory_config_relative_path: "work/cfg/memory/reserved-memory.json"
 
