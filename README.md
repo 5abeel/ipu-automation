@@ -105,3 +105,7 @@ Local `saiserver` instead of Artifactory:
 Variables:
 - `local_artifact_staging_dir` → resolved as `<repo>/staging`
 - `local_saiserver_tarball_path` → empty = download; basename = look in staging; absolute = use directly.
+
+## License
+
+Proprietary — use restricted to internal IPU lab environments.
